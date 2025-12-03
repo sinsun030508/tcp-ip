@@ -16,6 +16,8 @@ app.use("/", require("./routes/index"));
 app.use("/api/meetup", require("./routes/meetup.routes"));
 app.use("/api/places", require("./routes/place.routes"));
 app.use("/api/rooms", require("./routes/room.routes"));
+const meetupRoutes = require("./routes/meetup.routes");
+app.use("/api/meetup", meetupRoutes);
 
 // ✅ HTTP 서버 + Socket.IO 서버 생성
 const server = http.createServer(app);

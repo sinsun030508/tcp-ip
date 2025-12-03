@@ -1,6 +1,12 @@
 console.log("✅ main.js 로드 완료");
-
+// 추가할거 지금은 도보상 시간만 나오고 있는데 로그인 창에서 교통수단을 선택하게 예를 들어서 자동차, 대중교통, 도보 등
+// 그에 맞게 경로를 계산해서 보여주도록 기능 추가 가능
+// 그리고 지금 직선상의 경로만 나오는데 카카오 지도 API의 경로탐색 기능을 이용해서 실제 도로를 따라가는 경로로도 보여줄 수 있음
 // 여러 사람 위치 리스트
+let socket = null;              // ✅ 전역
+let participantMarkers = [];
+let participantOverlays = [];   // ✅ 닉네임 오버레이용
+
 const userLocations = [];
 let map;
 let centerMarker;
@@ -8,6 +14,7 @@ let placeMarkers = [];
 let pendingMoveTarget = null;
 let searchMarkers = [];     // 🔹 Kakao 검색 결과 마커들
 let placesService = null;  // 🔹 Kakao 장소 검색 서비스
+
 
 let currentRoomCode = null;
 let currentNickname = null;
@@ -20,8 +27,6 @@ let hasAddedMyLocation = false;
 let myMarker = null;
 
 let participants = [];          // 방 참가자 목록
-let socket = null;
-let participantMarkers = [];
 
 // ✅ 카카오 SDK까지 모두 로드된 뒤에 실행되도록 설정
 window.addEventListener("load", () => {
@@ -475,11 +480,21 @@ function showCenterAndPlaces(center, places) {
         kakao.maps.event.addListener(marker, 'mouseout', () => infowindow.close());
         // ✅ 추천 장소 마커 클릭 시 경로 설정
 kakao.maps.event.addListener(marker, 'click', () => {
-    const ok = confirm(`'${place.name}' 까지의 경로를 보시겠습니까?`);
+    const ok = confirm(`'${place.place_name}' 까지의 경로를 보시겠습니까?`);
     if (ok) {
-        setRouteTo(place.lat, place.lng, place.name);
+
+        // ⭐ [추가] 클릭한 곳의 인기(popularity) 증가 요청
+        fetch("/api/meetup/popularity", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kakao_id: place.id })
+        });
+
+        // 기존 경로 표시 기능
+        setRouteTo(lat, lng, place.place_name);
     }
 });
+
 
     });
 
@@ -555,7 +570,7 @@ function searchPlaces() {
             kakao.maps.event.addListener(marker, 'mouseover', () => iw.open(map, marker));
             kakao.maps.event.addListener(marker, 'mouseout', () => iw.close());
             // ✅ 마커 클릭 시 경로 설정 여부 묻기
-            kakao.maps.event.addListener(marker, 'click', () => {
+             kakao.maps.event.addListener(marker, 'click', () => {
             const ok = confirm(`'${place.place_name}' 까지의 경로를 보시겠습니까?`);
             if (ok) {
                 setRouteTo(lat, lng, place.place_name);
@@ -611,6 +626,74 @@ function afterLogin() {
     // ✅ 로그인 완료 후 WebSocket 연결
     connectSocket();
 }
+function connectSocket() {
+    if (socket) {
+        console.log("이미 소켓이 연결되어 있습니다.");
+        return;
+    }
+
+    socket = io();
+
+    socket.on("connect", () => {
+        console.log("✅ Socket.IO 연결됨:", socket.id);
+
+        if (currentRoomCode && currentNickname) {
+            socket.emit("joinRoom", {
+                roomCode: currentRoomCode,
+                nickname: currentNickname
+            });
+        }
+    });
+
+    // 📍 위치 목록 업데이트 (모든 참가자)
+    socket.on("locationsUpdate", (locations) => {
+        console.log("📍 locationsUpdate:", locations);
+
+        participantMarkers.forEach(m => m.setMap(null));
+        participantMarkers = [];
+
+        participantOverlays.forEach(ov => ov.setMap(null));
+        participantOverlays = [];
+
+        locations.forEach(loc => {
+            const latlng = new kakao.maps.LatLng(loc.lat, loc.lng);
+
+            const marker = new kakao.maps.Marker({
+                position: latlng,
+                map: map
+            });
+            participantMarkers.push(marker);
+
+            const overlay = new kakao.maps.CustomOverlay({
+                position: latlng,
+                yAnchor: 1.2,
+                content: `
+                    <div style="
+                        padding:2px 6px;
+                        font-size:12px;
+                        background:rgba(255,255,255,0.9);
+                        border:1px solid #666;
+                        border-radius:4px;
+                        white-space:nowrap;
+                    ">
+                        ${loc.nickname}
+                    </div>
+                `
+            });
+            overlay.setMap(map);
+            participantOverlays.push(overlay);
+        });
+    });
+
+    // 👥 참가자 목록 업데이트
+    socket.on("participantsUpdate", (list) => {
+        console.log("👥 participantsUpdate:", list);
+        participants = list;
+        renderParticipants();
+    });
+}
+
+
 
 function updateRoomInfoUI() {
     const roomInfo = document.getElementById("roomInfo");
@@ -650,53 +733,8 @@ function restoreSession() {
 }
 
 
-function connectSocket() {
-    if (socket) {
-        console.log("이미 소켓이 연결되어 있습니다.");
-        return;
-    }
 
-    socket = io();
 
-    socket.on("connect", () => {
-        console.log("✅ Socket.IO 연결됨:", socket.id);
-
-        if (currentRoomCode && currentNickname) {
-            socket.emit("joinRoom", {
-                roomCode: currentRoomCode,
-                nickname: currentNickname
-            });
-        }
-    });
-
-    // 방 참가자 위치 업데이트 받기
-    socket.on("locationsUpdate", (locations) => {
-        console.log("📍 locationsUpdate:", locations);
-
-        // 기존 마커 제거
-        participantMarkers.forEach(m => m.setMap(null));
-        participantMarkers = [];
-
-        // 새 마커 추가
-        locations.forEach(loc => {
-            const latlng = new kakao.maps.LatLng(loc.lat, loc.lng);
-            const marker = new kakao.maps.Marker({
-                position: latlng,
-                map: map
-            });
-            const iw = new kakao.maps.InfoWindow({
-            content: `<div style="padding:3px;font-size:12px;">${loc.nickname}</div>`
-        });
-        iw.open(map, marker);
-        participantMarkers.push(marker);
-        });
-    });
-    socket.on("participantsUpdate", (list) => {
-    console.log("👥 participantsUpdate:", list);
-    participants = list;
-    renderParticipants();
-});
-}
 
 
 // ✅ 방 만들기
@@ -785,7 +823,7 @@ async function handleJoinRoom() {
 window.focusPlace = focusPlace;
 
 function renderParticipants() {
-    const box = document.getElementById("participantsContent");
+    const box = document.getElementById("x  ");
 
     if (!box) return;
 
