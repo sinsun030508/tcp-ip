@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Meetup Map (카카오맵)</title>
+    <link rel="stylesheet" href="css/style.css">
+    
+</head>
+<body>
+
+<!-- ✅ 로그인 + 방 생성/참가 오버레이 -->
+<!-- <div id="loginOverlay">
+    <div class="login-card">
+        <h3>Meetup Map 로그인</h3>
+
+        <label style="font-size:0.9rem;">닉네임</label>
+        <input type="text" id="nicknameInput" placeholder="닉네임을 입력하세요">
+
+        <label style="font-size:0.9rem; margin-top:8px;">방 코드 (참가 시)</label>
+        <input type="text" id="roomCodeInput" placeholder="예: ABC12" maxlength="5">
+
+        <div class="btn-row">
+            <button id="createRoomBtn">방 만들기</button>
+            <button id="joinRoomBtn">방 참가</button>
+        </div>
+
+        <p id="loginError" class="error-msg"></p>
+    </div>
+</div> -->
+
+<header>
+    
+    <div id="roomInfo" style="font-size:0.9rem; margin-top:4px;">
+        로그인 후 방 정보가 표시됩니다.
+    </div>
+</header>
+<header>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Meetup Map (카카오맵)</h2>
+        <div>
+            <span id="roomInfo">로그인 후 방 정보가 표시됩니다.</span>
+            <button id="loginBtn" style="margin-left:8px;">로그인</button>
+            <button id="logoutBtn" style="margin-left:4px; display:none;">로그아웃</button>
+        </div>
+    </div>
+</header>
+<div id="controls">
+    <button id="addMeBtn">내 위치 추가</button>
+    <span id="info" style="margin-left:10px; font-size:0.9rem; color:#555;"></span>
+</div>
+
+
+
+
+<div id="main">
+    <!-- 왼쪽 사이드바 -->
+    <aside id="sidebar">
+        <h3>장소 검색</h3>
+
+        <label style="font-size:0.9rem;">카테고리</label>
+        <select id="searchCategory">
+    <option value="">전체</option>
+    <option value="cafe">카페</option>
+    <option value="food">식당</option>
+    <option value="study">스터디룸</option>
+</select>
+
+
+        <div><label style="font-size:0.9rem; margin-top:8px;">키워드</label>
+        <input type="text" id="searchKeyword" placeholder="예) 스타벅스, 김밥천국"></div>
+
+        <button id="searchBtn" style="margin-top:8px; width:100%;">검색</button>
+
+        <div id="searchResults">
+            <p style="font-size:0.85rem; color:#666;">검색 결과가 여기 표시됩니다.</p>
+        </div>
+
+        <div id="participantsBox">
+        <h4>참여 인원</h4>
+        <div id="participantsContent">
+            <p style="font-size:0.85rem; color:#666;">
+                현재 참여 인원이 없습니다.
+            </p>
+        </div>
+    </div>
+
+    <!-- ✅ 경로 정보 박스 -->
+    <div id="routeBox" style="margin-top:10px;">
+        <h4>경로 정보</h4>
+        <div id="routeContent">
+            <p style="font-size:0.85rem; color:#666;">
+                핀을 클릭하면 여기 경로 요약이 표시됩니다.
+            </p>
+    </div>
+</div>
+    </aside>
+
+    <!-- 오른쪽 지도 -->
+    <div id="map"></div>
+</div>
+
+
+
+<!-- ✅ Kakao Map SDK : autoload=false -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=679ae38b13a48b525aa0d70903584a22&libraries=services&autoload=false"></script>
+
+<script src="/socket.io/socket.io.js"></script>
+
+
+<!-- 메인 JS -->
+<script src="js/main.js"></script>
+<!-- ✅ 우클릭 위치 이동 확인 토스트 -->
+<div id="moveToast">
+    <span id="moveToastText">이 위치로 내 위치를 옮길까요?</span>
+    <div id="moveToastButtons">
+        <button id="moveToastOk">이 위치로 이동</button>
+        <button id="moveToastCancel">취소</button>
+    </div>
+</div>
+
+</body>
+</html>

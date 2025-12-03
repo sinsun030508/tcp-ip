@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>Meetup Map 로그인</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: #f5f5f5;
+        }
+        .login-page-wrap {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            padding: 10px 16px;
+            background: #222;
+            color: #fff;
+        }
+        header h2 {
+            margin: 0;
+        }
+        .login-center {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: #ffffff;
+            padding: 20px 24px;
+            border-radius: 10px;
+            min-width: 320px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .login-card h3 {
+            margin: 0 0 8px 0;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 6px 8px;
+            box-sizing: border-box;
+        }
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn-row button {
+            flex: 1;
+            padding: 8px 0;
+        }
+        .error-msg {
+            color: #d33;
+            font-size: 0.8rem;
+            min-height: 1em;
+        }
+    </style>
+</head>
+<body>
+<div class="login-page-wrap">
+    <header>
+        <h2>Meetup Map (카카오맵) - 로그인</h2>
+    </header>
+
+    <div class="login-center">
+        <div class="login-card">
+            <h3>Meetup Map 로그인</h3>
+
+            <label>닉네임</label>
+            <input id="nicknameInput" type="text" placeholder="닉네임을 입력하세요" />
+
+            <label>방 코드 (참가 시)</label>
+            <input id="roomCodeInput" type="text" placeholder="예: ABC12" />
+
+            <div class="btn-row">
+                <button id="createRoomBtn">방 만들기</button>
+                <button id="joinRoomBtn">방 참가</button>
+            </div>
+
+            <div id="loginError" class="error-msg"></div>
+
+            <p style="font-size:0.8rem;color:#666;margin-top:4px;">
+                방 만들기: 새 방 생성 후 자동 입장<br>
+                방 참가: 이미 생성된 방 코드로 입장
+            </p>
+        </div>
+    </div>
+</div>
+
+<script src="/js/login.js"></script>
+</body>
+</html>

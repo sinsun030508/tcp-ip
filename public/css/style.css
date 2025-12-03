@@ -1,0 +1,180 @@
+/* 전체 기본 */
+body {
+    margin: 0;
+    font-family: sans-serif;
+}
+
+/* 상단 헤더 */
+header {
+    padding: 10px 16px;
+    background: #222;
+    color: #fff;
+}
+
+header h2 {
+    margin: 0;
+}
+
+#roomInfo {
+    font-size: 0.9rem;
+}
+
+/* 상단 컨트롤 바 (카테고리, 버튼들) */
+#controls {
+    padding: 10px 16px;
+    background: #f5f5f5;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#controls select,
+#controls button {
+    padding: 6px 10px;
+}
+
+/* 메인 전체 레이아웃 */
+#main {
+    display: flex;
+    width: 100%;
+    height: calc(100vh - 120px); /* 헤더 + 버튼 제외한 전체 화면 */
+    box-sizing: border-box;
+    overflow: hidden; /* 사이드바가 밀어내지 않도록 */
+}
+
+/* 왼쪽 사이드바 */
+#sidebar {
+    width: 260px;
+    height: 100%;           /* 🔥 화면 전체 높이 고정 */
+    overflow-y: auto;       /* 🔥 내부 내용이 넘치면 스크롤 생성 */
+    padding: 10px;
+    border-right: 1px solid #ddd;
+    background: #fafafa;
+    box-sizing: border-box;
+    
+}
+
+/* 오른쪽 지도 */
+#map {
+    flex: 1;
+    height: 100%;           /* 🔥 지도 높이 고정 */
+    min-height: 400px;
+    box-sizing: border-box;
+}
+
+
+/* ────────────────────────────── */
+/* 로그인 오버레이 & 카드 디자인 */
+/* ────────────────────────────── */
+
+#loginOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.login-card {
+    background: #ffffff;
+    padding: 20px 24px;
+    border-radius: 10px;
+    min-width: 280px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.login-card input {
+    width: 100%;
+    padding: 6px 8px;
+    box-sizing: border-box;
+}
+
+.btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-row button {
+    flex: 1;
+    padding: 8px 0;
+}
+
+.error-msg {
+    color: #d33;
+    font-size: 0.8rem;
+    min-height: 1em;
+}
+#participantsBox {
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    padding: 6px;
+    box-sizing: border-box;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+}
+
+#participantsBox h4 {
+    margin: 0 0 4px 0;
+    font-size: 0.9rem;
+}
+
+#participantsContent {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 0.85rem;
+}
+
+#routeBox {
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    padding: 6px;
+    box-sizing: border-box;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+}
+
+#routeBox h4 {
+    margin: 0 0 4px 0;
+    font-size: 0.9rem;
+}
+
+#routeContent {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 0.85rem;
+}
+
+/* ──────────────── */
+/* 우클릭 이동 토스트 */
+/* ──────────────── */
+#moveToast {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: none;              /* 기본은 숨김 */
+    align-items: center;
+    gap: 10px;
+    z-index: 2000;
+    font-size: 0.85rem;
+}
+
+#moveToastButtons button {
+    margin-left: 4px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
