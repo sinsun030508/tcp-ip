@@ -1,35 +1,45 @@
-// Haversine 거리 계산
-function calcDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // km
+// src/utils/geo.util.js
 
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) ** 2;
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-}
-
-// 여러 사람 위치의 중심점 계산
+// 📌 중심점 계산 (lat/lng 평균)
 function calcCenterPoint(locations) {
-    let latSum = 0;
-    let lonSum = 0;
+    if (!locations || locations.length === 0) {
+        throw new Error("locations 배열이 비어있습니다.");
+    }
+
+    let sumLat = 0;
+    let sumLng = 0;
 
     locations.forEach(loc => {
-        latSum += loc.lat;
-        lonSum += loc.lng;
+        sumLat += Number(loc.lat);
+        sumLng += Number(loc.lng);
     });
 
     return {
-        lat: latSum / locations.length,
-        lng: lonSum / locations.length
+        lat: sumLat / locations.length,
+        lng: sumLng / locations.length
     };
 }
 
-module.exports = { calcDistance, calcCenterPoint };
+// 📌 하버사인 거리 계산 (미터 단위)
+function calcDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371000; // 지구 반지름(m)
+    const toRad = degree => (degree * Math.PI) / 180;
+
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLng / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // 거리 (m)
+}
+
+module.exports = {
+    calcCenterPoint,
+    calcDistance
+};

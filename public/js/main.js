@@ -2,31 +2,37 @@ console.log("✅ main.js 로드 완료");
 // 추가할거 지금은 도보상 시간만 나오고 있는데 로그인 창에서 교통수단을 선택하게 예를 들어서 자동차, 대중교통, 도보 등
 // 그에 맞게 경로를 계산해서 보여주도록 기능 추가 가능
 // 그리고 지금 직선상의 경로만 나오는데 카카오 지도 API의 경로탐색 기능을 이용해서 실제 도로를 따라가는 경로로도 보여줄 수 있음
-// 여러 사람 위치 리스트
-let socket = null;              // ✅ 전역
-let participantMarkers = [];
-let participantOverlays = [];   // ✅ 닉네임 오버레이용
 
+
+// 여러 사람 위치 리스트
 const userLocations = [];
 let map;
 let centerMarker;
 let placeMarkers = [];
-let pendingMoveTarget = null;
-let searchMarkers = [];     // 🔹 Kakao 검색 결과 마커들
-let placesService = null;  // 🔹 Kakao 장소 검색 서비스
 
+
+
+let searchMarkers = [];
+let placesService = null;
 
 let currentRoomCode = null;
 let currentNickname = null;
 
-let routeLines = [];      // 경로(폴리라인)들 저장
-let routeOverlays = [];   // 경로 위 라벨들
-
+let routeLines = [];
+let routeOverlays = [];
 
 let hasAddedMyLocation = false;
 let myMarker = null;
 
-let participants = [];          // 방 참가자 목록
+let participants = [];
+let socket = null;
+let participantMarkers = [];
+let participantOverlays = [];
+
+// 🚗 이동수단 저장 및 불러오기
+let myTransportMode = localStorage.getItem("meetupTransport") || "walk";
+
+
 
 // ✅ 카카오 SDK까지 모두 로드된 뒤에 실행되도록 설정
 window.addEventListener("load", () => {
@@ -199,77 +205,50 @@ function clearRoutes() {
  * @param {number} destLng
  * @param {string} destName
  */
-function setRouteTo(destLat, destLng, destName) {
+async function setRouteTo(destLat, destLng, destName) {
     clearRoutes();
 
     const destLatLng = new kakao.maps.LatLng(destLat, destLng);
     const routeInfoBox = document.getElementById("routeContent");
 
-    const validParticipants = (participants || []).filter(p => p.lat != null && p.lng != null);
+    const validParticipants = (participants || []).filter(
+        p => p.lat != null && p.lng != null
+    );
 
     if (!validParticipants.length) {
         if (routeInfoBox) {
-            routeInfoBox.innerHTML = `<p style="font-size:0.85rem; color:#666;">
-                위치가 등록된 참여자가 없습니다.
-            </p>`;
+            routeInfoBox.innerHTML = `
+                <p style="font-size:0.85rem; color:#666;">
+                    위치가 등록된 참여자가 없습니다.
+                </p>`;
         }
         return;
     }
 
     let infoHtml = `<p><b>${destName}</b> 까지의 경로</p><ul style="margin:4px 0; padding-left:16px;">`;
 
-    validParticipants.forEach(p => {
-    const startLatLng = new kakao.maps.LatLng(p.lat, p.lng);
+    // 참여자별로 경로 요청 + 그리기
+    for (const p of validParticipants) {
+        const start = { lat: p.lat, lng: p.lng };
+        const dest = { lat: destLat, lng: destLng };
 
-    // 🔴 직선 경로
-    const line = new kakao.maps.Polyline({
-        map: map,
-        path: [startLatLng, destLatLng],
-        strokeWeight: 3,
-        strokeColor: "#FF0000",
-        strokeOpacity: 0.8,
-        strokeStyle: "solid"
-    });
+        const result = await drawRealRoute(start, dest, p.nickname);
 
-    routeLines.push(line);
+        // 거리/시간 텍스트 계산
+        let distanceKm = 0;
+        let minutes = 0;
 
-    // 🔢 거리 계산
-    const distanceMeters = line.getLength();
-    const distanceKm = distanceMeters / 1000;
+        if (result && result.distanceMeters) {
+            distanceKm = result.distanceMeters / 1000;
+            // 기본 도보 4km/h 가정 (지금은 단일 모드)
+            const walkingSpeedMPerMin = (4 * 1000) / 60;
+            minutes = result.distanceMeters / walkingSpeedMPerMin;
+        }
 
-    const walkingSpeedMPerMin = (4 * 1000) / 60;
-    const minutes = distanceMeters / walkingSpeedMPerMin;
-
-    // 📌 직선 중간 지점에 거리 라벨 표시
-    const midLat = (p.lat + destLat) / 2;
-    const midLng = (p.lng + destLng) / 2;
-    const midLatLng = new kakao.maps.LatLng(midLat, midLng);
-
-    const labelContent = `
-        <div style="
-            padding:2px 4px;
-            font-size:11px;
-            color:#fff;
-            background:rgba(0,0,0,0.6);
-            border-radius:3px;
-            white-space:nowrap;
-        ">
-            ${p.nickname}: ${distanceKm.toFixed(2)}km
-        </div>
-    `;
-
-    const overlay = new kakao.maps.CustomOverlay({
-        position: midLatLng,
-        content: labelContent,
-        yAnchor: 0.5
-    });
-    overlay.setMap(map);
-    routeOverlays.push(overlay);
-
-    // 왼쪽 요약 텍스트
-    infoHtml += `<li>${p.nickname} → 약 ${distanceKm.toFixed(2)} km / 도보 약 ${minutes.toFixed(1)}분</li>`;
-});
-
+        infoHtml += `<li>${p.nickname} → 약 ${distanceKm.toFixed(
+            2
+        )} km / 도보 약 ${minutes.toFixed(1)}분</li>`;
+    }
 
     infoHtml += `</ul>`;
 
@@ -279,6 +258,102 @@ function setRouteTo(destLat, destLng, destName) {
 
     // 목적지를 화면 중앙으로
     map.setCenter(destLatLng);
+}
+
+
+function calculateTravelTime(distanceMeters) {
+    const mode = myTransportMode;
+
+    let speedMpm = 67; // 기본 = 도보(4km/h)
+
+    if (mode === "car") speedMpm = 667;        // 자동차
+    if (mode === "transit") speedMpm = 200;    // 대중교통 (대략)
+
+    return distanceMeters / speedMpm;
+}
+
+// 서버에 실제 도로 경로 요청
+async function requestRealRoute(startLat, startLng, destLat, destLng) {
+    try {
+        const res = await fetch("/api/meetup/route", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                start: { lat: startLat, lng: startLng },
+                end:   { lat: destLat, lng: destLng }
+            })
+        });
+
+        const data = await res.json();
+        return data;
+    } catch (e) {
+        console.error("🚨 requestRealRoute 오류:", e);
+        return null;
+    }
+}
+
+// 실제 도로 경로를 빨간선으로 그리기
+async function drawRealRoute(start, dest, nickname) {
+    const result = await requestRealRoute(start.lat, start.lng, dest.lat, dest.lng);
+
+    // 실패하면 그냥 직선 경로로 fallback
+    if (!result || !result.success || !result.route) {
+        console.warn("⚠️ 실제 경로를 가져오지 못했습니다. 직선 경로로 대체합니다.");
+
+        const line = new kakao.maps.Polyline({
+            map: map,
+            path: [
+                new kakao.maps.LatLng(start.lat, start.lng),
+                new kakao.maps.LatLng(dest.lat, dest.lng),
+            ],
+            strokeWeight: 3,
+            strokeColor: "#FF0000",
+            strokeOpacity: 0.8,
+            strokeStyle: "solid",
+        });
+        routeLines.push(line);
+        return {
+            distanceMeters: kakao.maps.geometry
+                ? kakao.maps.geometry.getDistance(
+                      new kakao.maps.LatLng(start.lat, start.lng),
+                      new kakao.maps.LatLng(dest.lat, dest.lng)
+                  )
+                : 0,
+        };
+    }
+
+    const data = result.route;
+
+    // Kakao Mobility 응답 구조 기준 (routes[0].sections[0].roads)
+    const route = data.routes[0];
+    const section = route.sections[0];
+    const roads = section.roads;
+
+    const path = [];
+    roads.forEach((r) => {
+        const v = r.vertexes; // [lng1,lat1,lng2,lat2,...]
+        for (let i = 0; i < v.length; i += 2) {
+            const lng = v[i];
+            const lat = v[i + 1];
+            path.push(new kakao.maps.LatLng(lat, lng));
+        }
+    });
+
+    // 실제 도로 따라 빨간선 그리기
+    const line = new kakao.maps.Polyline({
+        map: map,
+        path,
+        strokeWeight: 3,
+        strokeColor: "#FF0000",
+        strokeOpacity: 0.9,
+        strokeStyle: "solid",
+    });
+    routeLines.push(line);
+
+    const distanceMeters = route.summary ? route.summary.distance : 0;
+    const durationSec = route.summary ? route.summary.duration / 1000 : 0;
+
+    return { distanceMeters, durationSec };
 }
 
 
@@ -403,18 +478,33 @@ function moveMyLocationTo(lat, lng) {
 async function requestRecommend() {
     console.log("requestRecommend() 호출");
 
-    if (userLocations.length === 0) {
-        alert("먼저 '내 위치 추가'를 눌러 위치를 하나 이상 등록하세요.");
+    // ✅ 참여 인원 중에서 위치 등록된 사람들만 사용
+    const validParticipants = (participants || []).filter(
+        p => p.lat != null && p.lng != null
+    );
+
+    if (validParticipants.length === 0) {
+        alert("위치를 등록한 참여자가 없습니다. 먼저 각자 '내 위치 추가'를 눌러주세요.");
         return;
+    }
+
+    // 최소 2명은 있어야 '중간' 느낌이 남
+    if (validParticipants.length < 2) {
+        if (!confirm("위치를 등록한 사람이 1명입니다. 이 위치 기준으로만 추천할까요?")) {
+            return;
+        }
     }
 
     const categoryEl = document.getElementById('searchCategory');
     const category = categoryEl ? categoryEl.value : "";
 
-    const locationsPayload = userLocations.map(loc => ({
-        lat: loc.lat,
-        lng: loc.lng
-    }));
+    // 🔥 여기! 이제 userLocations 대신 participants 기반으로 전송
+   /* const locationsPayload = validParticipants.map(p => ({
+        lat: p.lat,
+        lng: p.lng
+    }));*/
+
+    console.log("추천 요청 locations:", locationsPayload);
 
     try {
         const res = await fetch('/api/meetup/recommend', {
@@ -440,6 +530,28 @@ async function requestRecommend() {
         console.error(e);
         alert("추천 요청 중 오류가 발생했습니다.");
     }
+}
+
+function getCenterFromParticipants() {
+    const valid = (participants || []).filter(
+        p => p.lat != null && p.lng != null
+    );
+
+    // 위치 있는 참여자가 없으면 null
+    if (valid.length === 0) return null;
+
+    let sumLat = 0;
+    let sumLng = 0;
+
+    valid.forEach(p => {
+        sumLat += Number(p.lat);
+        sumLng += Number(p.lng);
+    });
+
+    return {
+        lat: sumLat / valid.length,
+        lng: sumLng / valid.length,
+    };
 }
 
 
@@ -478,6 +590,15 @@ function showCenterAndPlaces(center, places) {
 
         kakao.maps.event.addListener(marker, 'mouseover', () => infowindow.open(map, marker));
         kakao.maps.event.addListener(marker, 'mouseout', () => infowindow.close());
+        // 추천/검색 마커 클릭 시
+        kakao.maps.event.addListener(marker, "click", () => {
+            const ok = confirm(`'${place.place_name}' 까지의 경로를 보시겠습니까?`);
+            if (ok) {
+                setRouteTo(lat, lng, place.place_name);
+            }       
+        });
+
+        
         // ✅ 추천 장소 마커 클릭 시 경로 설정
 kakao.maps.event.addListener(marker, 'click', () => {
     const ok = confirm(`'${place.place_name}' 까지의 경로를 보시겠습니까?`);
@@ -518,21 +639,37 @@ function searchPlaces() {
         return;
     }
 
+    // 🔹 참여 인원 기준 중앙 좌표 계산
+    const center = getCenterFromParticipants();
+    let centerLatLng;
+
+    if (center) {
+        centerLatLng = new kakao.maps.LatLng(center.lat, center.lng);
+        // 검색 전에 지도를 두 사람 중간으로 이동
+        map.setCenter(centerLatLng);
+        map.setLevel(8);  // 필요하면 5~8 사이로 조정
+        console.log("👥 참여 인원 중앙:", center);
+    } else {
+        // 아직 위치 등록한 사람이 없으면 기존처럼 현재 지도 중심 사용
+        centerLatLng = map.getCenter();
+        console.log("⚠ 참여 인원 위치 없음, map.getCenter() 사용");
+    }
+
     // 🔹 기존 검색 마커 제거
     searchMarkers.forEach(m => m.setMap(null));
     searchMarkers = [];
     resultsDiv.innerHTML = "검색 중...";
 
-    // 🔹 카테고리를 Kakao category_group_code 로 매핑 (선택)
-    //   cafe -> CE7(카페), food -> FD6(음식점), study -> AC5(학원/교육) 정도로 예시
+    // 🔹 카테고리를 Kakao category_group_code 로 매핑
     let categoryCode = null;
     if (category === "cafe") categoryCode = "CE7";
     else if (category === "food") categoryCode = "FD6";
     else if (category === "study") categoryCode = "AC5";
 
+    // ✅ 이제 '지도 중심'이 아니라 '참여 인원 중앙' 기준으로 검색
     const options = {
-        location: map.getCenter(),   // 현재 지도 중심 기준
-        radius: 3000,                // 3km 반경
+        location: centerLatLng,
+        radius: 5000,  // 3km 대신 5km 정도로 넓혀도 좋음
     };
     if (categoryCode) {
         options.category_group_code = categoryCode;
@@ -549,14 +686,12 @@ function searchPlaces() {
 
         console.log("Kakao 검색 결과:", data);
 
-        // 결과 리스트 HTML
         let html = '<ul style="list-style:none; padding-left:0; margin:0;">';
 
         data.forEach((place, idx) => {
             const lat = parseFloat(place.y);
             const lng = parseFloat(place.x);
 
-            // 🔹 지도에 마커 표시
             const latlng = new kakao.maps.LatLng(lat, lng);
             const marker = new kakao.maps.Marker({
                 position: latlng,
@@ -569,15 +704,14 @@ function searchPlaces() {
             });
             kakao.maps.event.addListener(marker, 'mouseover', () => iw.open(map, marker));
             kakao.maps.event.addListener(marker, 'mouseout', () => iw.close());
-            // ✅ 마커 클릭 시 경로 설정 여부 묻기
-             kakao.maps.event.addListener(marker, 'click', () => {
-            const ok = confirm(`'${place.place_name}' 까지의 경로를 보시겠습니까?`);
-            if (ok) {
-                setRouteTo(lat, lng, place.place_name);
-            }
-});
 
-            // 🔹 결과 리스트 항목
+            kakao.maps.event.addListener(marker, 'click', () => {
+                const ok = confirm(`'${place.place_name}' 까지의 경로를 보시겠습니까?`);
+                if (ok) {
+                    setRouteTo(lat, lng, place.place_name);
+                }
+            });
+
             html += `
                 <li style="margin-bottom:6px; cursor:pointer;"
                     onclick="focusPlace(${lat}, ${lng})">
@@ -592,13 +726,14 @@ function searchPlaces() {
         html += '</ul>';
         resultsDiv.innerHTML = html;
 
-        // 🔹 첫 번째 결과 기준으로 지도 중심 이동
+        // 첫 번째 결과 기준으로 지도 줌만 살짝 조정
         const first = data[0];
         const firstLatLng = new kakao.maps.LatLng(parseFloat(first.y), parseFloat(first.x));
         map.setCenter(firstLatLng);
-        map.setLevel(4);
+        map.setLevel(5);
     }, options);
 }
+
 
 
 // 5) 검색 결과 클릭 시 지도 이동
@@ -823,30 +958,37 @@ async function handleJoinRoom() {
 window.focusPlace = focusPlace;
 
 function renderParticipants() {
-    const box = document.getElementById("x  ");
+    const listEl  = document.getElementById("participants-list");
+    const emptyEl = document.getElementById("participants-empty");
 
-    if (!box) return;
+    if (!listEl || !emptyEl) return;
+
+    // 리스트 초기화
+    listEl.innerHTML = "";
 
     if (!participants || participants.length === 0) {
-        box.innerHTML = `<p style="font-size:0.85rem; color:#666;">현재 참여 인원이 없습니다.</p>`;
+        // 참여자 없을 때
+        emptyEl.style.display = "block";
     } else {
-        let html = `<p>총 <b>${participants.length}</b>명 참여중</p><ul style="padding-left:16px; margin:4px 0;">`;
+        emptyEl.style.display = "none";
 
         participants.forEach(p => {
-            if (p.lat != null && p.lng != null) {
-                html += `<li>${p.nickname} — (${p.lat.toFixed(4)}, ${p.lng.toFixed(4)})</li>`;
-            } else {
-                html += `<li>${p.nickname} — 위치 미등록</li>`;
-            }
-        });
+            const li = document.createElement("li");
 
-        html += `</ul>`;
-        box.innerHTML = html;
+            if (p.lat != null && p.lng != null) {
+                li.textContent = `${p.nickname} — (${p.lat.toFixed(4)}, ${p.lng.toFixed(4)})`;
+            } else {
+                li.textContent = `${p.nickname} — 위치 미등록`;
+            }
+
+            listEl.appendChild(li);
+        });
     }
 
-    // 🔁 상단 정보도 갱신
+    // 상단 방 정보 갱신
     updateRoomInfoUI();
 }
+
 
 window.addMyLocation = addMyLocation;
 window.addMyLocation = addMyLocation;

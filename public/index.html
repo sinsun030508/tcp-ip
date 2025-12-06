@@ -8,25 +8,10 @@
 </head>
 <body>
 
-<!-- ✅ 로그인 + 방 생성/참가 오버레이 -->
-<!-- <div id="loginOverlay">
-    <div class="login-card">
-        <h3>Meetup Map 로그인</h3>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/main.js"></script>
 
-        <label style="font-size:0.9rem;">닉네임</label>
-        <input type="text" id="nicknameInput" placeholder="닉네임을 입력하세요">
 
-        <label style="font-size:0.9rem; margin-top:8px;">방 코드 (참가 시)</label>
-        <input type="text" id="roomCodeInput" placeholder="예: ABC12" maxlength="5">
-
-        <div class="btn-row">
-            <button id="createRoomBtn">방 만들기</button>
-            <button id="joinRoomBtn">방 참가</button>
-        </div>
-
-        <p id="loginError" class="error-msg"></p>
-    </div>
-</div> -->
 
 <header>
     
@@ -59,15 +44,16 @@
 
         <label style="font-size:0.9rem;">카테고리</label>
         <select id="searchCategory">
-    <option value="">전체</option>
-    <option value="cafe">카페</option>
-    <option value="food">식당</option>
-    <option value="study">스터디룸</option>
-</select>
+            <option value="">전체</option>
+            <option value="cafe">카페</option>
+            <option value="food">식당</option>
+            <option value="study">스터디룸</option>
+        </select>
 
-
-        <div><label style="font-size:0.9rem; margin-top:8px;">키워드</label>
-        <input type="text" id="searchKeyword" placeholder="예) 스타벅스, 김밥천국"></div>
+        <div>
+            <label style="font-size:0.9rem; margin-top:8px;">키워드</label>
+            <input type="text" id="searchKeyword" placeholder="예) 스타벅스, 김밥천국">
+        </div>
 
         <button id="searchBtn" style="margin-top:8px; width:100%;">검색</button>
 
@@ -75,24 +61,22 @@
             <p style="font-size:0.85rem; color:#666;">검색 결과가 여기 표시됩니다.</p>
         </div>
 
-        <div id="participantsBox">
-        <h4>참여 인원</h4>
-        <div id="participantsContent">
-            <p style="font-size:0.85rem; color:#666;">
-                현재 참여 인원이 없습니다.
-            </p>
+        <!-- 참여 인원 카드 -->
+        <div class="card">
+            <h3>참여 인원</h3>
+            <ul id="participants-list"></ul>
+            <p id="participants-empty">현재 참여 인원이 없습니다.</p>
         </div>
-    </div>
 
-    <!-- ✅ 경로 정보 박스 -->
-    <div id="routeBox" style="margin-top:10px;">
-        <h4>경로 정보</h4>
-        <div id="routeContent">
-            <p style="font-size:0.85rem; color:#666;">
-                핀을 클릭하면 여기 경로 요약이 표시됩니다.
-            </p>
-    </div>
-</div>
+        <!-- ✅ 경로 정보 박스도 사이드바 안에 두기 -->
+        <div id="routeBox" style="margin-top:10px;">
+            <h4>경로 정보</h4>
+            <div id="routeContent">
+                <p style="font-size:0.85rem; color:#666;">
+                    핀을 클릭하면 여기 경로 요약이 표시됩니다.
+                </p>
+            </div>
+        </div>
     </aside>
 
     <!-- 오른쪽 지도 -->
@@ -101,14 +85,15 @@
 
 
 
+
 <!-- ✅ Kakao Map SDK : autoload=false -->
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=679ae38b13a48b525aa0d70903584a22&libraries=services&autoload=false"></script>
 
-<script src="/socket.io/socket.io.js"></script>
+<!--<script src="/socket.io/socket.io.js"></script> -->
 
 
-<!-- 메인 JS -->
-<script src="js/main.js"></script>
+<!-- 메인 JS <script src="js/main.js"></script> -->
+
 <!-- ✅ 우클릭 위치 이동 확인 토스트 -->
 <div id="moveToast">
     <span id="moveToastText">이 위치로 내 위치를 옮길까요?</span>

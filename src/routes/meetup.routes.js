@@ -1,12 +1,14 @@
-// src/routes/meetup.routes.js
 const express = require("express");
 const router = express.Router();
-const meetupController = require("../controllers/meetup.controller");
+const MeetupController = require("../controllers/meetup.controller");
 
-// 추천 장소 (카카오 API + DB 결합)
-router.post("/recommend", meetupController.recommendPlaces);
+// 추천 장소 (거리 + DB 반영)
+router.post("/recommend", MeetupController.recommend);
+
+// 실제 도로 경로 (카카오 네비 API)
+router.post("/route", MeetupController.getRoute);
 
 // 인기 증가 (마커 클릭 시)
-router.post("/popularity", meetupController.increasePopularity);
+router.post("/popularity", MeetupController.increasePopularity);
 
 module.exports = router;

@@ -6,6 +6,16 @@ const config = require("./config/config");
 
 const app = express();
 
+const path = require("path");
+const favicon = require("serve-favicon");
+
+const roomMembers = {};
+const roomLocations = {};
+
+
+app.use(favicon(path.join(__dirname, "../public/favicon.ico")));
+
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -29,8 +39,6 @@ const io = new Server(server, {
 
 // ✅ 방별 참가자 위치 저장 (메모리)
 // 기존에 있던 부분 근처
-const roomLocations = {};     // { roomCode: { nickname: { lat, lng } } }
-const roomMembers   = {};     // { roomCode: Set(nickname) }
 
 // 방 참가
 io.on("connection", (socket) => {
@@ -134,13 +142,13 @@ io.on("connection", (socket) => {
 
 // ✅ 참가자 목록 브로드캐스트 함수
 function broadcastParticipants(roomCode) {
-    const members = Array.from(roomMembers[roomCode] || []);
+    const membersSet = roomMembers[roomCode] || new Set();
     const locations = roomLocations[roomCode] || {};
 
-    const list = members.map((nick) => {
-        const loc = locations[nick];
+    const list = Array.from(membersSet).map((nickname) => {
+        const loc = locations[nickname];
         return {
-            nickname: nick,
+            nickname,
             lat: loc ? loc.lat : null,
             lng: loc ? loc.lng : null,
         };
@@ -148,6 +156,7 @@ function broadcastParticipants(roomCode) {
 
     io.to(roomCode).emit("participantsUpdate", list);
 }
+
 
 app.use("/api/meetup", require("./routes/meetup.routes"));
 
