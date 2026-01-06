@@ -12,6 +12,9 @@ const favicon = require("serve-favicon");
 const roomMembers = {};
 const roomLocations = {};
 
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, "0.0.0.0");
+
 
 app.use(favicon(path.join(__dirname, "../public/favicon.ico")));
 
