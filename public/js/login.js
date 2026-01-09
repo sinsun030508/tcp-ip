@@ -24,19 +24,32 @@ window.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        try {
-            const res = await fetch("/api/rooms/create", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nickname })
-            });
+try {
+  const res = await fetch("/api/rooms/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname })
+  });
 
-            const data = await res.json();
+  const text = await res.text();
+  let data = null;
 
-            if (!res.ok || !data.success) {
-                errorEl.textContent = data.message || "방 생성에 실패했습니다.";
-                return;
-            }
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (_) {
+    // 서버가 JSON이 아닌 응답을 줬을 때 대비
+  }
+
+  if (!res.ok) {
+    errorEl.textContent =
+      (data && data.message) ? data.message : `서버 오류(${res.status})가 발생했습니다.`;
+    return;
+  }
+
+  if (!data || !data.success) {
+    errorEl.textContent = (data && data.message) || "방 생성에 실패했습니다.";
+    return;
+  }
 
             // 🔐 세션 저장
             localStorage.setItem("meetupNickname", nickname);
