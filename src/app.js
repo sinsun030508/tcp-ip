@@ -100,6 +100,27 @@ io.on("connection", (socket) => {
   });
 });
 
+app.get("/dbtest", async (req, res) => {
+  try {
+    const mysql = require("mysql2/promise");
+    const pool = mysql.createPool({
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      socketPath: `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}`,
+      waitForConnections: true,
+      connectionLimit: 5
+    });
+
+    const [rows] = await pool.query("SELECT 1 AS ok");
+    res.json(rows);
+  } catch (e) {
+    console.error("DBTEST ERROR:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 function broadcastParticipants(roomCode) {
   const membersSet = roomMembers[roomCode] || new Set();
   const locations = roomLocations[roomCode] || {};
