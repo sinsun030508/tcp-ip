@@ -3,6 +3,7 @@ gcp에 실행 화면을 띄우는 거 까지는 성공 했으나 db를 gcp서버
 이 버전은 gcp 배포 버전으로 개인 노트북으로는 실행이 안되는 버전
 
 
+
 <img width="1873" height="1139" alt="실행사진" src="https://github.com/user-attachments/assets/29d78508-d6b5-4180-a88c-aed55f1b9475" />
 일단 실행완료 사진 첨부
 
